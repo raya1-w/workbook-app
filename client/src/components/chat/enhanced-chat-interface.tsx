@@ -82,6 +82,9 @@ export function EnhancedChatInterface({ roomId, projectId }: EnhancedChatInterfa
   const [taskAssignee, setTaskAssignee] = useState<number | undefined>(undefined);
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [isProject, setIsProject] = useState<any>(null);
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [searchingUser, setSearchingUser] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendMessage, lastMessage } = useWebSocket();
@@ -384,6 +387,80 @@ export function EnhancedChatInterface({ roomId, projectId }: EnhancedChatInterfa
     if (confirm(`Are you sure you want to remove ${username}?`)) {
       removeMemberMutation.mutate(userId);
     }
+  };
+  
+  // Handle user search by username
+  const handleSearchUser = async () => {
+    if (!newUsername.trim()) return;
+    
+    setSearchingUser(true);
+    setSearchError("");
+    setSearchResult(null);
+    
+    try {
+      const response = await apiRequest("GET", `/api/users/search?username=${encodeURIComponent(newUsername.trim())}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setSearchError("User not found");
+        } else {
+          setSearchError("Failed to search for user");
+        }
+        return;
+      }
+      
+      const userData = await response.json();
+      setSearchResult(userData);
+    } catch (error) {
+      setSearchError("Error searching for user");
+      console.error("Error searching for user:", error);
+    } finally {
+      setSearchingUser(false);
+    }
+  };
+  
+  // Add chat room participant mutation
+  const addChatParticipantMutation = useMutation({
+    mutationFn: async (participantId: number) => {
+      const response = await apiRequest(
+        "POST", 
+        `/api/chat-rooms/${roomId}/participants`, 
+        { participantId }
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Participant added",
+        description: "User has been added to the chat room.",
+      });
+      
+      // Clear search
+      setSearchResult(null);
+      setNewUsername("");
+      
+      // Refresh participants list
+      queryClient.invalidateQueries({
+        queryKey: ['/api/chat-rooms', roomId, 'participants'],
+      });
+      
+      // Send a notification in the chat
+      sendMessage('chat_message', {
+        roomId,
+        content: `A new participant has been added to the chat.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to add participant",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleAddChatParticipant = (participantId: number) => {
+    addChatParticipantMutation.mutate(participantId);
   };
 
   const filteredMessages = searchQuery 
@@ -804,7 +881,7 @@ export function EnhancedChatInterface({ roomId, projectId }: EnhancedChatInterfa
           <Tabs defaultValue="members" className="mt-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="members">Current Members</TabsTrigger>
-              <TabsTrigger value="invite" disabled={!isProject}>Add Member</TabsTrigger>
+              <TabsTrigger value="invite">Add Member</TabsTrigger>
             </TabsList>
             
             <TabsContent value="members" className="mt-4">
@@ -870,17 +947,48 @@ export function EnhancedChatInterface({ roomId, projectId }: EnhancedChatInterfa
                       onChange={(e) => setNewUsername(e.target.value)}
                     />
                     <Button 
-                      onClick={handleAddMember}
-                      disabled={!newUsername.trim() || addMemberMutation.isPending}
+                      onClick={isProject ? handleAddMember : handleSearchUser}
+                      disabled={!newUsername.trim() || (isProject ? addMemberMutation.isPending : searchingUser)}
                     >
-                      {addMemberMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+                      {isProject 
+                        ? (addMemberMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add") 
+                        : (searchingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search")}
                     </Button>
                   </div>
+                  {searchError && (
+                    <p className="text-sm text-destructive mt-1">{searchError}</p>
+                  )}
+                  {searchResult && !isProject && (
+                    <div className="mt-2 p-2 border rounded-md flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>
+                            {searchResult.username.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{searchResult.fullName || searchResult.username}</p>
+                          <p className="text-xs text-muted-foreground">@{searchResult.username}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm"
+                        onClick={() => handleAddChatParticipant(searchResult.id)}
+                        disabled={addChatParticipantMutation.isPending}
+                      >
+                        {addChatParticipantMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : null}
+                        Add to Chat
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="text-sm text-muted-foreground">
-                  Enter the username of the person you want to add to this project.
-                  They must have an account on the platform.
+                  {isProject 
+                    ? "Enter the username of the person you want to add to this project. They must have an account on the platform."
+                    : "Search for a user by username to add them to this chat room. They must have an account on the platform."}
                 </div>
               </div>
             </TabsContent>
