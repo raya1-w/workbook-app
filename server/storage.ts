@@ -54,10 +54,23 @@ export interface IStorage {
   getChatRoom(id: number): Promise<ChatRoom | undefined>;
   getProjectChatRooms(projectId: number): Promise<ChatRoom[]>;
   createChatRoom(room: ChatRoomInsert): Promise<ChatRoom>;
+  getUserDirectChats(userId: number): Promise<(ChatRoom & { participants: User[] })[]>;
+  getDirectChatRoom(user1Id: number, user2Id: number): Promise<ChatRoom | undefined>;
+  createDirectChatRoom(userId1: number, userId2: number): Promise<ChatRoom>;
+  
+  // Chat Room Participants
+  getChatRoomParticipants(roomId: number): Promise<(ChatRoomParticipant & { user: User })[]>;
+  addChatRoomParticipant(participant: ChatRoomParticipantInsert): Promise<ChatRoomParticipant>;
+  removeChatRoomParticipant(roomId: number, userId: number): Promise<void>;
   
   // Chat Messages
   getChatMessages(roomId: number, limit?: number): Promise<(ChatMessage & { user: User })[]>;
   createChatMessage(message: ChatMessageInsert): Promise<ChatMessage & { user: User }>;
+  
+  // Chat Files
+  getChatFile(id: number): Promise<ChatFile | undefined>;
+  getChatRoomFiles(roomId: number): Promise<(ChatFile & { uploader: User })[]>;
+  createChatFile(file: ChatFileInsert): Promise<ChatFile>;
   
   // Notifications
   getUserNotifications(userId: number): Promise<Notification[]>;
@@ -393,6 +406,160 @@ class DatabaseStorage implements IStorage {
   
   async deleteProjectFile(id: number): Promise<void> {
     await db.delete(projectFiles).where(eq(projectFiles.id, id));
+  }
+
+  // Direct messaging methods
+  async getUserDirectChats(userId: number): Promise<(ChatRoom & { participants: User[] })[]> {
+    // Get all chat rooms where this user is a participant and isDirectMessage is true
+    const rooms = await db
+      .select({
+        room: chatRooms,
+      })
+      .from(chatRoomParticipants)
+      .innerJoin(
+        chatRooms,
+        and(
+          eq(chatRoomParticipants.roomId, chatRooms.id),
+          eq(chatRooms.isDirectMessage, true)
+        )
+      )
+      .where(eq(chatRoomParticipants.userId, userId))
+      .orderBy(desc(chatRooms.updatedAt || chatRooms.createdAt));
+
+    // For each room, get all participants
+    const result: (ChatRoom & { participants: User[] })[] = [];
+    
+    for (const { room } of rooms) {
+      const participants = await this.getChatRoomParticipants(room.id);
+      const users = participants.map(p => p.user);
+      result.push({
+        ...room,
+        participants: users,
+      });
+    }
+    
+    return result;
+  }
+  
+  async getDirectChatRoom(user1Id: number, user2Id: number): Promise<ChatRoom | undefined> {
+    // Find rooms where both users are participants and isDirectMessage is true
+    const user1Rooms = await db
+      .select({ roomId: chatRoomParticipants.roomId })
+      .from(chatRoomParticipants)
+      .innerJoin(
+        chatRooms,
+        and(
+          eq(chatRoomParticipants.roomId, chatRooms.id),
+          eq(chatRooms.isDirectMessage, true)
+        )
+      )
+      .where(eq(chatRoomParticipants.userId, user1Id));
+    
+    if (user1Rooms.length === 0) return undefined;
+    
+    const roomIds = user1Rooms.map(r => r.roomId);
+    
+    const commonRooms = await db
+      .select({ roomId: chatRoomParticipants.roomId })
+      .from(chatRoomParticipants)
+      .where(
+        and(
+          eq(chatRoomParticipants.userId, user2Id),
+          inArray(chatRoomParticipants.roomId, roomIds)
+        )
+      );
+    
+    if (commonRooms.length === 0) return undefined;
+    
+    const room = await this.getChatRoom(commonRooms[0].roomId);
+    return room;
+  }
+  
+  async createDirectChatRoom(userId1: number, userId2: number): Promise<ChatRoom> {
+    // Check if direct chat room already exists
+    const existingRoom = await this.getDirectChatRoom(userId1, userId2);
+    if (existingRoom) return existingRoom;
+    
+    // Get user information for naming the chat room
+    const user1 = await this.getUser(userId1);
+    const user2 = await this.getUser(userId2);
+    
+    if (!user1 || !user2) {
+      throw new Error("One or both users do not exist");
+    }
+    
+    // Create a new direct chat room
+    const room = await this.createChatRoom({
+      name: `${user1.username} & ${user2.username}`,
+      createdBy: userId1,
+      isDirectMessage: true,
+    });
+    
+    // Add both users as participants
+    await this.addChatRoomParticipant({ roomId: room.id, userId: userId1 });
+    await this.addChatRoomParticipant({ roomId: room.id, userId: userId2 });
+    
+    return room;
+  }
+  
+  // Chat room participants methods
+  async getChatRoomParticipants(roomId: number): Promise<(ChatRoomParticipant & { user: User })[]> {
+    const participants = await db
+      .select({
+        participant: chatRoomParticipants,
+        user: users,
+      })
+      .from(chatRoomParticipants)
+      .innerJoin(users, eq(chatRoomParticipants.userId, users.id))
+      .where(eq(chatRoomParticipants.roomId, roomId));
+    
+    return participants.map(({ participant, user }) => ({
+      ...participant,
+      user,
+    }));
+  }
+  
+  async addChatRoomParticipant(participant: ChatRoomParticipantInsert): Promise<ChatRoomParticipant> {
+    const created = await db.insert(chatRoomParticipants).values(participant).returning();
+    return created[0];
+  }
+  
+  async removeChatRoomParticipant(roomId: number, userId: number): Promise<void> {
+    await db.delete(chatRoomParticipants)
+      .where(
+        and(
+          eq(chatRoomParticipants.roomId, roomId),
+          eq(chatRoomParticipants.userId, userId)
+        )
+      );
+  }
+  
+  // Chat Files methods
+  async getChatFile(id: number): Promise<ChatFile | undefined> {
+    const result = await db.select().from(chatFiles).where(eq(chatFiles.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async getChatRoomFiles(roomId: number): Promise<(ChatFile & { uploader: User })[]> {
+    const files = await db
+      .select({
+        file: chatFiles,
+        uploader: users,
+      })
+      .from(chatFiles)
+      .innerJoin(users, eq(chatFiles.uploadedBy, users.id))
+      .where(eq(chatFiles.roomId, roomId))
+      .orderBy(desc(chatFiles.createdAt));
+    
+    return files.map(({ file, uploader }) => ({
+      ...file,
+      uploader,
+    }));
+  }
+  
+  async createChatFile(file: ChatFileInsert): Promise<ChatFile> {
+    const created = await db.insert(chatFiles).values(file).returning();
+    return created[0];
   }
 }
 
