@@ -6,6 +6,8 @@ import {
   tasks, Task, TaskInsert,
   chatRooms, ChatRoom, ChatRoomInsert,
   chatMessages, ChatMessage, ChatMessageInsert,
+  chatRoomParticipants, ChatRoomParticipant, ChatRoomParticipantInsert,
+  chatFiles, ChatFile, ChatFileInsert,
   notifications, Notification, NotificationInsert,
   projectFiles, ProjectFile, ProjectFileInsert,
 } from "@shared/schema";

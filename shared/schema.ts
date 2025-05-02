@@ -92,7 +92,8 @@ export type Task = typeof tasks.$inferSelect;
 export const chatRooms = pgTable("chat_rooms", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  projectId: integer("project_id").references(() => projects.id).notNull(),
+  projectId: integer("project_id").references(() => projects.id),  // Made optional for direct messages
+  isDirectMessage: boolean("is_direct_message").default(false).notNull(),
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -120,6 +121,18 @@ export const chatMessageInsertSchema = createInsertSchema(chatMessages, {
 
 export type ChatMessageInsert = z.infer<typeof chatMessageInsertSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+
+// Chat Room Participants (for direct messages)
+export const chatRoomParticipants = pgTable("chat_room_participants", {
+  id: serial("id").primaryKey(),
+  roomId: integer("room_id").references(() => chatRooms.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+});
+
+export const chatRoomParticipantInsertSchema = createInsertSchema(chatRoomParticipants);
+export type ChatRoomParticipantInsert = z.infer<typeof chatRoomParticipantInsertSchema>;
+export type ChatRoomParticipant = typeof chatRoomParticipants.$inferSelect;
 
 // Notifications
 export const notifications = pgTable("notifications", {
@@ -158,12 +171,33 @@ export const projectFileInsertSchema = createInsertSchema(projectFiles, {
 export type ProjectFileInsert = z.infer<typeof projectFileInsertSchema>;
 export type ProjectFile = typeof projectFiles.$inferSelect;
 
+// Chat Files
+export const chatFiles = pgTable("chat_files", {
+  id: serial("id").primaryKey(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileType: text("file_type").notNull(),
+  filePath: text("file_path").notNull(),
+  messageId: integer("message_id").references(() => chatMessages.id).notNull(),
+  roomId: integer("room_id").references(() => chatRooms.id).notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const chatFileInsertSchema = createInsertSchema(chatFiles, {
+  fileName: (schema) => schema.min(1, "File name is required"),
+});
+
+export type ChatFileInsert = z.infer<typeof chatFileInsertSchema>;
+export type ChatFile = typeof chatFiles.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   tasks: many(tasks, { relationName: "assignedTasks" }),
   createdTasks: many(tasks, { relationName: "createdTasks" }),
   projects: many(projectMembers),
   messages: many(chatMessages),
+  chatRooms: many(chatRoomParticipants),
   createdProjects: many(projects, { relationName: "createdProjects" }),
   notifications: many(notifications),
   uploadedFiles: many(projectFiles, { relationName: "uploadedFiles" }),
@@ -219,6 +253,7 @@ export const chatRoomsRelations = relations(chatRooms, ({ one, many }) => ({
     references: [users.id],
   }),
   messages: many(chatMessages),
+  participants: many(chatRoomParticipants),
 }));
 
 export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
@@ -248,5 +283,31 @@ export const projectFilesRelations = relations(projectFiles, ({ one }) => ({
     fields: [projectFiles.uploadedBy],
     references: [users.id],
     relationName: "uploadedFiles",
+  }),
+}));
+
+export const chatRoomParticipantsRelations = relations(chatRoomParticipants, ({ one }) => ({
+  room: one(chatRooms, {
+    fields: [chatRoomParticipants.roomId],
+    references: [chatRooms.id],
+  }),
+  user: one(users, {
+    fields: [chatRoomParticipants.userId],
+    references: [users.id],
+  }),
+}));
+
+export const chatFilesRelations = relations(chatFiles, ({ one }) => ({
+  message: one(chatMessages, {
+    fields: [chatFiles.messageId],
+    references: [chatMessages.id],
+  }),
+  room: one(chatRooms, {
+    fields: [chatFiles.roomId],
+    references: [chatRooms.id],
+  }),
+  uploader: one(users, {
+    fields: [chatFiles.uploadedBy],
+    references: [users.id],
   }),
 }));
