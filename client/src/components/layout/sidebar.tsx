@@ -53,7 +53,7 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
           <Brain className="h-6 w-6 text-sidebar-foreground" />
         </div>
-        <h1 className="ml-3 font-fantasy text-xl font-bold">TaskMaster</h1>
+        <h1 className="ml-3 font-fantasy text-xl font-bold">WorkBook</h1>
       </div>
       
       {/* Navigation menu */}
@@ -95,7 +95,7 @@ export function Sidebar({ className }: SidebarProps) {
       {/* User profile */}
       <div className="p-4 border-t border-sidebar-border flex items-center">
         <Avatar>
-          <AvatarImage src={user?.profileImage} alt="User profile" />
+          <AvatarImage src={user?.profileImage || undefined} alt="User profile" />
           <AvatarFallback className="bg-primary-light text-sidebar-foreground">
             {user?.name?.charAt(0) || user?.username?.charAt(0) || 'U'}
           </AvatarFallback>
