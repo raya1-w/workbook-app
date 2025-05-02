@@ -214,10 +214,4 @@ const apiHtml = `<!DOCTYPE html>
 fs.writeFileSync(path.join(publicDir, 'api.html'), apiHtml);
 console.log('Created API documentation page');
 
-// Create a simple .htaccess-like file for the server
-fs.writeFileSync(path.join(publicDir, '_redirects'), `
-/api/* /api/:splat 200
-/* /index.html 200
-`);
-
 console.log('Frontend build completed successfully!');
