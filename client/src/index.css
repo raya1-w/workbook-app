@@ -1,0 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 20%;
+    
+    --primary: 262 54% 55%;
+    --primary-light: 262 54% 68%;
+    --primary-dark: 262 54% 45%;
+    
+    --secondary: 174 64% 40%;
+    --secondary-light: 174 64% 53%;
+    --secondary-dark: 174 64% 27%;
+    
+    --accent: 36 100% 65%;
+    --accent-light: 36 100% 74%;
+    --accent-dark: 36 100% 44%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+ 
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+ 
+    --primary-foreground: 0 0% 100%;
+    --secondary-foreground: 0 0% 100%;
+    --accent-foreground: 0 0% 20%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --ring: 262 54% 55%;
+ 
+    --radius: 0.5rem;
+
+    --chart-1: 262 54% 55%;
+    --chart-2: 174 64% 40%;
+    --chart-3: 36 100% 65%;
+    --chart-4: 0 84.2% 60.2%;
+    --chart-5: 199 89% 48%;
+
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 262 54% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 36 100% 65%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 262 54% 55%;
+  }
+ 
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 96%;
+    
+    --primary: 262 54% 55%;
+    --primary-light: 262 54% 68%;
+    --primary-dark: 262 54% 45%;
+    
+    --secondary: 174 64% 40%;
+    --secondary-light: 174 64% 53%;
+    --secondary-dark: 174 64% 27%;
+    
+    --accent: 36 100% 65%;
+    --accent-light: 36 100% 74%;
+    --accent-dark: 36 100% 44%;
+ 
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+ 
+    --popover: 224 71% 4%;
+    --popover-foreground: 0 0% 96%;
+ 
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+ 
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+ 
+    --primary-foreground: 0 0% 100%;
+    --secondary-foreground: 0 0% 100%;
+    --accent-foreground: 0 0% 20%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --ring: 262 54% 55%;
+
+    --chart-1: 262 54% 55%;
+    --chart-2: 174 64% 40%;
+    --chart-3: 36 100% 65%;
+    --chart-4: 0 84.2% 60.2%;
+    --chart-5: 199 89% 48%;
+
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 262 54% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 36 100% 65%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 262 54% 55%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(126, 87, 194, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(126, 87, 194, 0.8);
+}
+
+/* Card flip animation */
+.memory-card {
+  perspective: 1000px;
+}
+
+.memory-card-inner {
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.memory-card.flipped .memory-card-inner {
+  transform: rotateY(180deg);
+}
+
+.memory-card-front, .memory-card-back {
+  backface-visibility: hidden;
+}
+
+.memory-card-back {
+  transform: rotateY(180deg);
+}
+
+/* Progress bar animation */
+@keyframes progress {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+
+.task-card {
+  @apply transition-all duration-200;
+}
+
+.task-card:hover {
+  @apply shadow-md;
+}
+
+.task-status-todo {
+  @apply border-l-4 border-primary;
+}
+
+.task-status-in_progress {
+  @apply border-l-4 border-accent;
+}
+
+.task-status-completed {
+  @apply border-l-4 border-secondary;
+}
+
+.priority-high {
+  @apply bg-accent-light text-accent-dark;
+}
+
+.priority-medium {
+  @apply bg-muted text-muted-foreground;
+}
+
+.priority-low {
+  @apply bg-secondary-light text-secondary-dark;
+}
