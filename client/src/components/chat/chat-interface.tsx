@@ -303,6 +303,40 @@ export function ChatInterface({ roomId, projectId }: ChatInterfaceProps) {
     addMemberMutation.mutate(newUsername.trim());
   };
   
+  // Remove member mutation
+  const removeMemberMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await apiRequest(
+        "DELETE", 
+        `/api/projects/${projectId}/members/${userId}`
+      );
+      return response.ok ? null : response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/projects', projectId, 'members'],
+      });
+      
+      toast({
+        title: "Member removed",
+        description: "The member has been removed from the project.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to remove member",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleRemoveMember = (userId: number, username: string) => {
+    if (confirm(`Are you sure you want to remove ${username}?`)) {
+      removeMemberMutation.mutate(userId);
+    }
+  };
+  
   if (loadingRoom || loadingMessages) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -312,101 +346,217 @@ export function ChatInterface({ roomId, projectId }: ChatInterfaceProps) {
   }
   
   return (
-    <div className="bg-card rounded-lg shadow-md overflow-hidden flex flex-col h-full">
-      <div className="bg-primary p-3 text-primary-foreground flex justify-between items-center">
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-xs font-medium">
-            <MessageIcon />
+    <>
+      <div className="bg-card rounded-lg shadow-md overflow-hidden flex flex-col h-full">
+        <div className="bg-primary p-3 text-primary-foreground flex justify-between items-center">
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-xs font-medium">
+              <MessageIcon />
+            </div>
+            <div className="ml-2">
+              <h3 className="font-medium">{room?.name || "Chat Room"}</h3>
+              <div className="text-xs opacity-80">Project Chat</div>
+            </div>
           </div>
-          <div className="ml-2">
-            <h3 className="font-medium">{room?.name || "Chat Room"}</h3>
-            <div className="text-xs opacity-80">Project Chat</div>
-          </div>
-        </div>
-        <div className="flex">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-primary-foreground hover:text-primary-foreground/80 mr-1"
-            onClick={() => setMembersDialogOpen(true)}
-          >
-            <UsersIcon className="h-5 w-5 mr-1" />
-            <span className="text-xs">Members</span>
-          </Button>
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:text-primary-foreground/80">
-            <InfoIcon className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" id="chat-messages">
-        {messages?.length > 0 ? (
-          messages.map((message: ChatMessage & { user: any }) => (
-            <MessageItem key={message.id} message={message} currentUser={user} />
-          ))
-        ) : (
-          <div className="text-center text-muted-foreground p-4">
-            No messages yet. Start the conversation!
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      <div className="p-3 border-t border-border">
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Type your message..."
-            className="pr-10 rounded-full"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <Button
-            onClick={handleSendMessage}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-primary hover:text-primary-dark transition-colors h-8 w-8 p-0"
-            size="sm"
-            variant="ghost"
-            disabled={!message.trim()}
-          >
-            <SendIcon className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="flex justify-between mt-2 px-2">
-          <div className="flex space-x-2">
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <ImageIcon className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <PaperclipIcon className="h-4 w-4" />
-            </Button>
+          <div className="flex">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 w-8 p-0"
-              onClick={handleCreateTask}
+              className="text-primary-foreground hover:text-primary-foreground/80 mr-1"
+              onClick={() => setMembersDialogOpen(true)}
             >
-              <TaskIcon className="h-4 w-4" />
+              <UsersIcon className="h-5 w-5 mr-1" />
+              <span className="text-xs">Members</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-primary-foreground hover:text-primary-foreground/80">
+              <InfoIcon className="h-5 w-5" />
             </Button>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="text-xs bg-primary hover:bg-primary-dark text-primary-foreground px-2 py-1 h-8" size="sm">
-                <PlusIcon className="h-4 w-4 mr-1" /> Create
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-4" id="chat-messages">
+          {messages?.length > 0 ? (
+            messages.map((message: ChatMessage & { user: any }) => (
+              <MessageItem key={message.id} message={message} currentUser={user} />
+            ))
+          ) : (
+            <div className="text-center text-muted-foreground p-4">
+              No messages yet. Start the conversation!
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <div className="p-3 border-t border-border">
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Type your message..."
+              className="pr-10 rounded-full"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <Button
+              onClick={handleSendMessage}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-primary hover:text-primary-dark transition-colors h-8 w-8 p-0"
+              size="sm"
+              variant="ghost"
+              disabled={!message.trim()}
+            >
+              <SendIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex justify-between mt-2 px-2">
+            <div className="flex space-x-2">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <ImageIcon className="h-4 w-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleCreateTask}>
-                New Task
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCreateProject}>
-                New Project
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <PaperclipIcon className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={handleCreateTask}
+              >
+                <TaskIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="text-xs bg-primary hover:bg-primary-dark text-primary-foreground px-2 py-1 h-8" size="sm">
+                  <PlusIcon className="h-4 w-4 mr-1" /> Create
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCreateTask}>
+                  New Task
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCreateProject}>
+                  New Project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Members Dialog */}
+      <Dialog open={membersDialogOpen} onOpenChange={setMembersDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Project Members</DialogTitle>
+            <DialogDescription>
+              View, add, or remove members from this project
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs defaultValue="members" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="members">Current Members</TabsTrigger>
+              <TabsTrigger value="invite" disabled={!isProject}>Add Member</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="members" className="mt-4">
+              {loadingMembers ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : members && members.length > 0 ? (
+                <div className="space-y-4">
+                  {members.map((member: any) => (
+                    <div 
+                      key={member.user.id} 
+                      className="flex items-center justify-between p-3 bg-muted/40 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium">
+                          {member.user.name ? member.user.name.charAt(0).toUpperCase() : 
+                           member.user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            {member.user.name || member.user.username}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {member.user.email || member.user.username}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-primary/20 text-primary rounded-full px-2 py-1">
+                          {member.role === 'admin' ? 'Admin' : 'Member'}
+                        </span>
+                        {isProject && user?.id !== member.user.id && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive"
+                            title="Remove member"
+                            onClick={() => handleRemoveMember(member.user.id, member.user.name || member.user.username)}
+                            disabled={removeMemberMutation.isPending}
+                          >
+                            {removeMemberMutation.isPending ? 
+                              <Loader2 className="h-4 w-4 animate-spin" /> : 
+                              "\u00D7"  /* &times; */}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  No members in this project yet.
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="invite" className="mt-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="username"
+                      placeholder="Enter username to invite"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                    />
+                    <Button 
+                      onClick={handleAddMember}
+                      disabled={!newUsername.trim() || addMemberMutation.isPending}
+                    >
+                      {addMemberMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Add Member'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg border p-4 text-sm space-y-2">
+                  <h4 className="font-medium">Adding Members</h4>
+                  <p className="text-muted-foreground">
+                    Enter the username of someone you'd like to add to this project. They will 
+                    receive a notification when added and will be able to view all project details.
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+          
+          <DialogFooter className="mt-6">
+            <Button variant="outline" onClick={() => setMembersDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
