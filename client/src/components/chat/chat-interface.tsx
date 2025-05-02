@@ -170,6 +170,7 @@ export function ChatInterface({ roomId, projectId }: ChatInterfaceProps) {
           priority: 'medium',
           projectId: projectId,
           createdBy: user!.id,
+          dueDate: null, // Explicitly set to null to avoid timestamp errors
         }),
       });
       
