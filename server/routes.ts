@@ -9,6 +9,12 @@ import path from "path";
 import fs from "fs";
 import { projectUpload, chatUpload, getFileUrl } from "./file-uploads";
 
+// Utility function to safely check project membership
+async function safeCheckProjectMembership(projectId: number | null, userId: number): Promise<boolean> {
+  if (projectId === null) return false;
+  return storage.isProjectMember(projectId, userId);
+}
+
 interface WebSocketMessage {
   type: string;
   payload: any;
@@ -384,9 +390,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Task not found' });
       }
       
-      // Check if user is a member of the project
-      const isMember = await storage.isProjectMember(task.projectId, req.user!.id);
-      if (!isMember) {
+      // Check if user is a member of the project (if task has a project)
+      const isMember = await safeCheckProjectMembership(task.projectId, req.user!.id);
+      if (!isMember && task.projectId !== null) {
         return res.status(403).json({ message: 'Not authorized to update this task' });
       }
       
@@ -519,6 +525,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Direct Messaging API
+  app.get('/api/direct-messages', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const userId = req.user!.id;
+      const directChats = await storage.getUserDirectChats(userId);
+      res.json(directChats);
+    } catch (error) {
+      console.error('Error fetching direct chats:', error);
+      res.status(500).json({ message: 'Error fetching direct chats' });
+    }
+  });
+  
+  app.post('/api/direct-messages/create', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const userId = req.user!.id;
+    const { recipientId } = req.body;
+    
+    if (!recipientId) {
+      return res.status(400).json({ message: 'Recipient ID is required' });
+    }
+    
+    try {
+      const room = await storage.createDirectChatRoom(userId, parseInt(recipientId));
+      res.status(201).json(room);
+    } catch (error) {
+      console.error('Error creating direct message room:', error);
+      res.status(500).json({ message: 'Failed to create direct message room' });
+    }
+  });
+  
+  app.get('/api/direct-messages/:roomId/participants', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const { roomId } = req.params;
+    
+    try {
+      const participants = await storage.getChatRoomParticipants(parseInt(roomId));
+      res.json(participants);
+    } catch (error) {
+      console.error('Error fetching chat room participants:', error);
+      res.status(500).json({ message: 'Failed to fetch participants' });
+    }
+  });
+  
+  app.get('/api/direct-messages/:roomId/files', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const { roomId } = req.params;
+    
+    try {
+      const files = await storage.getChatRoomFiles(parseInt(roomId));
+      res.json(files);
+    } catch (error) {
+      console.error('Error fetching chat room files:', error);
+      res.status(500).json({ message: 'Failed to fetch files' });
+    }
+  });
+  
+  app.post('/api/direct-messages/:roomId/files', chatUpload.single('file'), async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const userId = req.user!.id;
+    const { roomId } = req.params;
+    const { messageId } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    
+    try {
+      const chatRoom = await storage.getChatRoom(parseInt(roomId));
+      if (!chatRoom) {
+        return res.status(404).json({ message: 'Chat room not found' });
+      }
+      
+      // Check if user is a participant in this direct message
+      const participants = await storage.getChatRoomParticipants(parseInt(roomId));
+      const isParticipant = participants.some(p => p.user.id === userId);
+      
+      if (!isParticipant) {
+        return res.status(403).json({ message: 'Not authorized to upload files to this chat' });
+      }
+      
+      // Create a chat file record
+      const chatFile = await storage.createChatFile({
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        filePath: req.file.path,
+        messageId: parseInt(messageId),
+        roomId: parseInt(roomId),
+        uploadedBy: userId,
+      });
+      
+      // Return file info with URL
+      res.status(201).json({
+        ...chatFile,
+        url: getFileUrl(req.file.path),
+      });
+    } catch (error) {
+      console.error('Error uploading chat file:', error);
+      res.status(500).json({ message: 'Failed to upload file' });
+    }
+  });
+  
+  // Get all users for direct messaging (exclude current user)
+  app.get('/api/users', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const userId = req.user!.id;
+    
+    try {
+      // Get all users from projects the current user is a member of
+      const projects = await storage.getUserProjects(userId);
+      const projectMembers = [];
+      
+      for (const project of projects) {
+        const members = await storage.getProjectMembers(project.id);
+        projectMembers.push(...members.map(member => member.user));
+      }
+      
+      // Remove duplicates and current user
+      const uniqueUsers = Array.from(
+        new Map(projectMembers.map(user => [user.id, user]))
+          .values()
+      ).filter(user => user.id !== userId);
+      
+      res.json(uniqueUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  });
+
   // Chat Messages API
   app.get('/api/chat-rooms/:id/messages', async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -533,10 +688,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Chat room not found' });
       }
       
-      // Check if user is a member of the project
-      const isMember = await storage.isProjectMember(chatRoom.projectId, req.user!.id);
-      if (!isMember) {
-        return res.status(403).json({ message: 'Not authorized to view messages for this chat room' });
+      // If it's a project chat room, check membership
+      if (chatRoom.projectId && !chatRoom.isDirectMessage) {
+        const isMember = await storage.isProjectMember(chatRoom.projectId, req.user!.id);
+        if (!isMember) {
+          return res.status(403).json({ message: 'Not authorized to view messages for this chat room' });
+        }
+      } else if (chatRoom.isDirectMessage) {
+        // For direct messages, check if user is a participant
+        const participants = await storage.getChatRoomParticipants(roomId);
+        const isParticipant = participants.some(p => p.user.id === req.user!.id);
+        if (!isParticipant) {
+          return res.status(403).json({ message: 'Not authorized to view messages for this chat room' });
+        }
       }
       
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;

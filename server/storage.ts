@@ -424,7 +424,7 @@ class DatabaseStorage implements IStorage {
         )
       )
       .where(eq(chatRoomParticipants.userId, userId))
-      .orderBy(desc(chatRooms.updatedAt || chatRooms.createdAt));
+      .orderBy(desc(chatRooms.createdAt));
 
     // For each room, get all participants
     const result: (ChatRoom & { participants: User[] })[] = [];
