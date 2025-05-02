@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { TaskDialog } from "@/components/tasks/task-dialog";
+import { FileList } from "@/components/projects/file-list";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Select,
@@ -12,6 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
@@ -110,7 +117,18 @@ export default function TasksPage() {
               <Skeleton className="h-[600px]" />
             </div>
           ) : (
-            <KanbanBoard projectId={selectedProject} />
+            <Tabs defaultValue="tasks" className="w-full">
+              <TabsList className="grid w-[200px] grid-cols-2 mb-4">
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="files">Files</TabsTrigger>
+              </TabsList>
+              <TabsContent value="tasks" className="mt-0">
+                <KanbanBoard projectId={selectedProject} />
+              </TabsContent>
+              <TabsContent value="files" className="mt-0">
+                {user && <FileList projectId={selectedProject} currentUserId={user.id} />}
+              </TabsContent>
+            </Tabs>
           )}
         </main>
       </div>
