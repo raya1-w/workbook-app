@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
+import { TaskDialog } from "@/components/tasks/task-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Select,
@@ -22,6 +23,7 @@ export default function TasksPage() {
   const isMobile = useMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   
   // Fetch user's projects
   const { data: projects, isLoading: loadingProjects } = useQuery({
@@ -90,7 +92,11 @@ export default function TasksPage() {
                 </Select>
               )}
               
-              <Button className="gap-1">
+              <Button 
+                className="gap-1" 
+                onClick={() => setTaskDialogOpen(true)}
+                disabled={!selectedProject}
+              >
                 <Plus size={16} />
                 New Task
               </Button>
@@ -108,6 +114,17 @@ export default function TasksPage() {
           )}
         </main>
       </div>
+
+      {/* Task Dialog */}
+      {selectedProject && (
+        <TaskDialog
+          open={taskDialogOpen}
+          onOpenChange={setTaskDialogOpen}
+          task={null}
+          projectId={selectedProject}
+          onClose={() => setTaskDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }
