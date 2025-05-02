@@ -20,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -34,7 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Timer, Play, Square, Clock } from "lucide-react";
 import { format } from "date-fns";
 
 const taskFormSchema = z.object({
@@ -45,6 +46,7 @@ const taskFormSchema = z.object({
   assignedTo: z.number().optional().nullable(),
   dueDate: z.date().optional().nullable(),
   recurringType: z.enum(["none", "daily", "weekly", "monthly"]).default("none"),
+  estimatedMinutes: z.number().optional().nullable(),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -90,6 +92,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId, onClose }: Tas
     assignedTo: task?.assignedTo || null,
     dueDate: task?.dueDate ? new Date(task.dueDate) : null,
     recurringType: task?.recurringType || "none",
+    estimatedMinutes: task?.estimatedMinutes || null,
   };
   
   const form = useForm<TaskFormValues>({
@@ -108,6 +111,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId, onClose }: Tas
         assignedTo: task?.assignedTo || null,
         dueDate: task?.dueDate ? new Date(task.dueDate) : null,
         recurringType: task?.recurringType || "none",
+        estimatedMinutes: task?.estimatedMinutes || null,
       });
       
       setDate(task?.dueDate ? new Date(task.dueDate) : undefined);
@@ -347,33 +351,63 @@ export function TaskDialog({ open, onOpenChange, task, projectId, onClose }: Tas
               />
             </div>
             
-            <FormField
-              control={form.control}
-              name="recurringType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Recurring</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="recurringType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Recurring</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select recurring type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="estimatedMinutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time Estimate (minutes)</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select recurring type" />
-                      </SelectTrigger>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Estimated minutes"
+                        {...field}
+                        value={field.value === null ? "" : field.value}
+                        onChange={(e) => {
+                          const value = e.target.value === "" ? null : parseInt(e.target.value);
+                          field.onChange(value);
+                        }}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormDescription>
+                      <Clock className="inline h-3 w-3 mr-1" />
+                      Estimate how long this task will take
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <DialogFooter>
               <Button 
