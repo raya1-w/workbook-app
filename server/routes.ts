@@ -584,6 +584,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get chat room participants (generic route for all chat rooms)
+  app.get('/api/chat-rooms/:roomId/participants', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const userId = req.user!.id;
+    const roomId = parseInt(req.params.roomId);
+    
+    try {
+      // Verify the chat room exists
+      const chatRoom = await storage.getChatRoom(roomId);
+      
+      if (!chatRoom) {
+        return res.status(404).json({ message: 'Chat room not found' });
+      }
+      
+      // Check authorization
+      if (chatRoom.projectId) {
+        // For project chat rooms, check if user is a project member
+        const isMember = await storage.isProjectMember(chatRoom.projectId, userId);
+        
+        if (!isMember) {
+          return res.status(403).json({ message: 'Not authorized to view participants for this chat room' });
+        }
+      } else if (chatRoom.isDirectMessage) {
+        // For direct messages, check if user is a participant
+        const currentParticipants = await storage.getChatRoomParticipants(roomId);
+        const isParticipant = currentParticipants.some(p => p.user.id === userId);
+        
+        if (!isParticipant) {
+          return res.status(403).json({ message: 'Not authorized to view participants for this chat room' });
+        }
+      }
+      
+      // Get participants
+      const participants = await storage.getChatRoomParticipants(roomId);
+      res.json(participants);
+    } catch (error) {
+      console.error('Error fetching chat room participants:', error);
+      res.status(500).json({ message: 'Failed to fetch participants' });
+    }
+  });
+  
   // Add participant to chat room
   app.post('/api/chat-rooms/:roomId/participants', async (req, res) => {
     if (!req.isAuthenticated()) {
