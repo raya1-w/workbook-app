@@ -72,7 +72,7 @@ export const tasks = pgTable("tasks", {
   status: taskStatusEnum("status").notNull().default("todo"),
   priority: taskPriorityEnum("priority").notNull().default("medium"),
   dueDate: timestamp("due_date"),
-  projectId: integer("project_id").references(() => projects.id).notNull(),
+  projectId: integer("project_id").references(() => projects.id), // Making projectId nullable for personal tasks
   assignedTo: integer("assigned_to").references(() => users.id),
   createdBy: integer("created_by").references(() => users.id).notNull(),
   recurringType: recurringTypeEnum("recurring_type").notNull().default("none"),
