@@ -1,4 +1,4 @@
-import { Calendar, Trash2, Clock, Play, Square, Timer } from "lucide-react";
+import { Calendar, Trash2, Clock, Play, Square, Timer, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Task } from "@shared/schema";
 import { format } from "date-fns";
@@ -136,7 +136,7 @@ export function TaskCard({ task, onDragStart, onEdit, onClick }: TaskCardProps) 
     <>
       <div 
         className={cn(
-          "bg-muted p-3 rounded-lg shadow-sm task-card cursor-pointer",
+          "bg-muted p-3 rounded-lg shadow-sm task-card cursor-pointer transition-all hover:shadow-md",
           getStatusClass(),
           task.status === "completed" && "opacity-80"
         )}
@@ -145,7 +145,10 @@ export function TaskCard({ task, onDragStart, onEdit, onClick }: TaskCardProps) 
         onClick={onClick}
       >
         <div className="flex justify-between items-start">
-          <h4 className="font-medium">{task.title}</h4>
+          <h4 className="font-medium flex items-center">
+            <Eye className="h-3.5 w-3.5 mr-1.5 text-muted-foreground opacity-70" />
+            {task.title}
+          </h4>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

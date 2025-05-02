@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,9 @@ export function TaskDetail({ open, onOpenChange, task, projectId, users, onEditC
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="text-xl">{task.title}</DialogTitle>
+          <DialogDescription>
+            View and manage task details and time tracking
+          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4 space-y-6">
