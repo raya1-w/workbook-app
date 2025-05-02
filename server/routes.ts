@@ -611,8 +611,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
+      // Format date properly if it exists
+      const taskData = { ...req.body };
+      
+      // Handle date formatting - ensure it's a valid Date object
+      if (taskData.dueDate) {
+        try {
+          // If it's already a valid date string, leave it as is
+          // Otherwise, make sure it's in a proper format
+          const dueDate = new Date(taskData.dueDate);
+          if (!isNaN(dueDate.getTime())) {
+            taskData.dueDate = dueDate;
+          } else {
+            taskData.dueDate = null;
+          }
+        } catch (e) {
+          // If date parsing fails, set to null
+          taskData.dueDate = null;
+        }
+      }
+      
       const task = await storage.createTask({
-        ...req.body,
+        ...taskData,
         projectId: null, // Personal tasks have no project
         createdBy: req.user!.id,
         assignedTo: req.user!.id // Personal tasks are assigned to the creator
@@ -644,7 +664,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Not authorized to update this task' });
       }
       
-      const updatedTask = await storage.updateTask(taskId, req.body);
+      // Format date properly if it exists
+      const taskData = { ...req.body };
+      
+      // Handle date formatting - ensure it's a valid Date object
+      if (taskData.dueDate) {
+        try {
+          const dueDate = new Date(taskData.dueDate);
+          if (!isNaN(dueDate.getTime())) {
+            taskData.dueDate = dueDate;
+          } else {
+            taskData.dueDate = null;
+          }
+        } catch (e) {
+          taskData.dueDate = null;
+        }
+      }
+      
+      const updatedTask = await storage.updateTask(taskId, taskData);
       res.json(updatedTask);
     } catch (error) {
       console.error('Error updating personal task:', error);
