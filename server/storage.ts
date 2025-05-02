@@ -7,6 +7,7 @@ import {
   chatRooms, ChatRoom, ChatRoomInsert,
   chatMessages, ChatMessage, ChatMessageInsert,
   notifications, Notification, NotificationInsert,
+  projectFiles, ProjectFile, ProjectFileInsert,
 } from "@shared/schema";
 import { eq, and, or, desc, sql, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -60,6 +61,12 @@ export interface IStorage {
   getUserNotifications(userId: number): Promise<Notification[]>;
   createNotification(notification: NotificationInsert): Promise<Notification>;
   markNotificationAsRead(id: number): Promise<void>;
+  
+  // Project Files
+  getProjectFile(id: number): Promise<ProjectFile | undefined>;
+  getProjectFiles(projectId: number): Promise<(ProjectFile & { uploader: User })[]>;
+  createProjectFile(file: ProjectFileInsert): Promise<ProjectFile>;
+  deleteProjectFile(id: number): Promise<void>;
   
   // Session Store
   sessionStore: session.Store;
@@ -352,6 +359,38 @@ class DatabaseStorage implements IStorage {
     await db.update(notifications)
       .set({ read: true })
       .where(eq(notifications.id, id));
+  }
+  
+  // Project Files methods
+  async getProjectFile(id: number): Promise<ProjectFile | undefined> {
+    const result = await db.select().from(projectFiles).where(eq(projectFiles.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async getProjectFiles(projectId: number): Promise<(ProjectFile & { uploader: User })[]> {
+    const files = await db
+      .select({
+        file: projectFiles,
+        uploader: users,
+      })
+      .from(projectFiles)
+      .innerJoin(users, eq(projectFiles.uploadedBy, users.id))
+      .where(eq(projectFiles.projectId, projectId))
+      .orderBy(desc(projectFiles.createdAt));
+    
+    return files.map(({ file, uploader }) => ({
+      ...file,
+      uploader,
+    }));
+  }
+  
+  async createProjectFile(file: ProjectFileInsert): Promise<ProjectFile> {
+    const created = await db.insert(projectFiles).values(file).returning();
+    return created[0];
+  }
+  
+  async deleteProjectFile(id: number): Promise<void> {
+    await db.delete(projectFiles).where(eq(projectFiles.id, id));
   }
 }
 
