@@ -61,6 +61,9 @@ export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "com
 // Priority enum for tasks
 export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high"]);
 
+// Recurring type enum for tasks
+export const recurringTypeEnum = pgEnum("recurring_type", ["none", "daily", "weekly", "monthly"]);
+
 // Tasks
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
@@ -72,6 +75,7 @@ export const tasks = pgTable("tasks", {
   projectId: integer("project_id").references(() => projects.id).notNull(),
   assignedTo: integer("assigned_to").references(() => users.id),
   createdBy: integer("created_by").references(() => users.id).notNull(),
+  recurringType: recurringTypeEnum("recurring_type").notNull().default("none"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

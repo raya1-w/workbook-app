@@ -72,7 +72,12 @@ export default function PersonalTasksPage() {
   // Create a personal task
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormValues) => {
-      const response = await apiRequest("POST", '/api/personal-tasks', data);
+      // Format the date properly to avoid timestamp errors
+      const formattedData = {
+        ...data,
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+      };
+      const response = await apiRequest("POST", '/api/personal-tasks', formattedData);
       return response.json();
     },
     onSuccess: () => {
@@ -97,7 +102,12 @@ export default function PersonalTasksPage() {
   const updateTaskMutation = useMutation({
     mutationFn: async (data: TaskFormValues & { id: number }) => {
       const { id, ...taskData } = data;
-      const response = await apiRequest("PUT", `/api/personal-tasks/${id}`, taskData);
+      // Format the date properly to avoid timestamp errors
+      const formattedData = {
+        ...taskData,
+        dueDate: taskData.dueDate ? new Date(taskData.dueDate).toISOString() : null,
+      };
+      const response = await apiRequest("PUT", `/api/personal-tasks/${id}`, formattedData);
       return response.json();
     },
     onSuccess: () => {
