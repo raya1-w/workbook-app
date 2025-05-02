@@ -1,4 +1,4 @@
-import { Calendar, Trash2 } from "lucide-react";
+import { Calendar, Trash2, Clock, Play, Square, Timer } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Task } from "@shared/schema";
 import { format } from "date-fns";
@@ -12,6 +12,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -29,9 +30,10 @@ interface TaskCardProps {
   task: Task & { assignee?: { name: string; username: string; profileImage?: string } };
   onDragStart: (e: React.DragEvent) => void;
   onEdit: () => void;
+  onClick?: () => void;
 }
 
-export function TaskCard({ task, onDragStart, onEdit }: TaskCardProps) {
+export function TaskCard({ task, onDragStart, onEdit, onClick }: TaskCardProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
@@ -88,16 +90,59 @@ export function TaskCard({ task, onDragStart, onEdit }: TaskCardProps) {
     }
   };
   
+  // Format time as HH:MM
+  const formatTime = (minutes: number | null): string => {
+    if (!minutes) return "00:00";
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+  
+  // Get time tracking indicator
+  const getTimeTrackingIndicator = () => {
+    if (task.currentlyTracking) {
+      return (
+        <Badge variant="outline" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 flex items-center">
+          <span className="animate-pulse mr-1 h-2 w-2 rounded-full bg-green-500"></span>
+          <Clock className="h-3 w-3 mr-1" />
+          Tracking
+        </Badge>
+      );
+    }
+    
+    if (task.totalTrackedMinutes) {
+      return (
+        <span className="text-xs text-muted-foreground flex items-center">
+          <Clock className="h-3 w-3 mr-1" />
+          {formatTime(task.totalTrackedMinutes)}
+          {task.estimatedMinutes ? ` / ${formatTime(task.estimatedMinutes)}` : ""}
+        </span>
+      );
+    }
+    
+    if (task.estimatedMinutes) {
+      return (
+        <span className="text-xs text-muted-foreground flex items-center">
+          <Clock className="h-3 w-3 mr-1" />
+          Est: {formatTime(task.estimatedMinutes)}
+        </span>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <>
       <div 
         className={cn(
-          "bg-muted p-3 rounded-lg shadow-sm task-card cursor-move",
+          "bg-muted p-3 rounded-lg shadow-sm task-card cursor-pointer",
           getStatusClass(),
           task.status === "completed" && "opacity-80"
         )}
         draggable
         onDragStart={onDragStart}
+        onClick={onClick}
       >
         <div className="flex justify-between items-start">
           <h4 className="font-medium">{task.title}</h4>
@@ -124,15 +169,34 @@ export function TaskCard({ task, onDragStart, onEdit }: TaskCardProps) {
           </DropdownMenu>
         </div>
         
-        <div className="flex items-center mt-1">
+        <div className="flex items-center mt-1 gap-1 flex-wrap">
           <span className={cn("text-xs px-2 py-0.5 rounded-full", getPriorityClass())}>
             {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
           </span>
+          
+          {task.currentlyTracking && (
+            <Badge variant="outline" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 flex items-center">
+              <span className="animate-pulse mr-1 h-2 w-2 rounded-full bg-green-500"></span>
+              Tracking
+            </Badge>
+          )}
         </div>
         
         {task.description && (
           <p className="text-sm text-muted-foreground mt-2">{task.description}</p>
         )}
+        
+        {/* Time tracking progress */}
+        {(task.estimatedMinutes && task.totalTrackedMinutes) ? (
+          <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+            <div 
+              className="bg-primary h-1.5 rounded-full" 
+              style={{ 
+                width: `${Math.min(100, (task.totalTrackedMinutes / task.estimatedMinutes) * 100)}%` 
+              }}
+            ></div>
+          </div>
+        ) : null}
         
         <div className="flex justify-between items-center mt-3">
           <div className="flex items-center">
@@ -150,12 +214,16 @@ export function TaskCard({ task, onDragStart, onEdit }: TaskCardProps) {
             )}
           </div>
           
-          {task.dueDate && (
-            <span className="text-xs text-muted-foreground flex items-center">
-              <Calendar className="h-3 w-3 mr-1" />
-              {formatDueDate()}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {getTimeTrackingIndicator()}
+            
+            {task.dueDate && (
+              <span className="text-xs text-muted-foreground flex items-center">
+                <Calendar className="h-3 w-3 mr-1" />
+                {formatDueDate()}
+              </span>
+            )}
+          </div>
         </div>
       </div>
       
