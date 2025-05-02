@@ -449,8 +449,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Only the creator or project admin can delete tasks
       if (task.createdBy !== req.user!.id) {
-        const project = await storage.getProject(task.projectId);
-        if (!project || project.createdBy !== req.user!.id) {
+        // If this is a project task, check if user is project admin
+        if (task.projectId !== null) {
+          const project = await storage.getProject(task.projectId);
+          if (!project || project.createdBy !== req.user!.id) {
+            return res.status(403).json({ message: 'Not authorized to delete this task' });
+          }
+        } else {
+          // For personal tasks, only the creator can delete
           return res.status(403).json({ message: 'Not authorized to delete this task' });
         }
       }
