@@ -76,6 +76,11 @@ export const tasks = pgTable("tasks", {
   assignedTo: integer("assigned_to").references(() => users.id),
   createdBy: integer("created_by").references(() => users.id).notNull(),
   recurringType: recurringTypeEnum("recurring_type").notNull().default("none"),
+  // Time tracking fields
+  estimatedMinutes: integer("estimated_minutes"),
+  totalTrackedMinutes: integer("total_tracked_minutes").default(0),
+  currentlyTracking: boolean("currently_tracking").default(false),
+  trackingStartedAt: timestamp("tracking_started_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -83,6 +88,10 @@ export const tasks = pgTable("tasks", {
 export const taskInsertSchema = createInsertSchema(tasks, {
   title: (schema) => schema.min(3, "Task title must be at least 3 characters"),
   dueDate: (schema) => schema.nullable(),
+  estimatedMinutes: (schema) => schema.nullable(),
+  totalTrackedMinutes: (schema) => schema.nullable().default(0),
+  currentlyTracking: (schema) => schema.nullable().default(false),
+  trackingStartedAt: (schema) => schema.nullable(),
 });
 
 export type TaskInsert = z.infer<typeof taskInsertSchema>;

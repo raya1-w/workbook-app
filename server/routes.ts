@@ -733,6 +733,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Time Tracking API
+  app.post('/api/tasks/:id/track/start', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const taskId = parseInt(req.params.id);
+      const task = await storage.getTask(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check if user is assigned to the task or created it
+      if (task.assignedTo !== req.user!.id && task.createdBy !== req.user!.id) {
+        return res.status(403).json({ message: 'Not authorized to track time for this task' });
+      }
+      
+      // Check if task is already being tracked
+      if (task.currentlyTracking) {
+        return res.status(400).json({ message: 'Task is already being tracked' });
+      }
+      
+      // Update task with tracking info
+      const updatedTask = await storage.updateTask(taskId, {
+        currentlyTracking: true,
+        trackingStartedAt: new Date(),
+      });
+      
+      res.json(updatedTask);
+      
+      // Broadcast task update to all connected WebSocket clients
+      const taskData = {
+        type: 'task_tracking_started',
+        payload: updatedTask
+      };
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(taskData));
+        }
+      });
+    } catch (error) {
+      console.error('Error starting time tracking:', error);
+      res.status(500).json({ message: 'Error starting time tracking' });
+    }
+  });
+  
+  app.post('/api/tasks/:id/track/stop', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const taskId = parseInt(req.params.id);
+      const task = await storage.getTask(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check if user is assigned to the task or created it
+      if (task.assignedTo !== req.user!.id && task.createdBy !== req.user!.id) {
+        return res.status(403).json({ message: 'Not authorized to track time for this task' });
+      }
+      
+      // Check if task is being tracked
+      if (!task.currentlyTracking || !task.trackingStartedAt) {
+        return res.status(400).json({ message: 'Task is not being tracked' });
+      }
+      
+      // Calculate minutes spent
+      const startTime = new Date(task.trackingStartedAt);
+      const endTime = new Date();
+      const minutesSpent = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+      
+      // Update total tracked minutes
+      const totalTrackedMinutes = (task.totalTrackedMinutes || 0) + minutesSpent;
+      
+      // Update task with tracking info
+      const updatedTask = await storage.updateTask(taskId, {
+        currentlyTracking: false,
+        trackingStartedAt: null,
+        totalTrackedMinutes,
+      });
+      
+      res.json(updatedTask);
+      
+      // Broadcast task update to all connected WebSocket clients
+      const taskData = {
+        type: 'task_tracking_stopped',
+        payload: updatedTask
+      };
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(taskData));
+        }
+      });
+    } catch (error) {
+      console.error('Error stopping time tracking:', error);
+      res.status(500).json({ message: 'Error stopping time tracking' });
+    }
+  });
+  
   app.put('/api/notifications/:id/read', async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: 'Not authenticated' });
