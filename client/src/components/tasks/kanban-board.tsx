@@ -3,7 +3,8 @@ import { TaskCard } from "./task-card";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Task } from "@shared/schema";
 import { TaskDialog } from "./task-dialog";
-import { PlusIcon } from "lucide-react";
+import { TaskDetail } from "./task-detail";
+import { PlusIcon, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useWebSocket } from "@/lib/use-websocket";
@@ -14,6 +15,7 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const { lastMessage } = useWebSocket();
@@ -91,6 +93,11 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     setIsDialogOpen(true);
   };
   
+  const handleViewTask = (task: Task) => {
+    setSelectedTask(task);
+    setIsDetailOpen(true);
+  };
+  
   const handleCreateTask = () => {
     setSelectedTask(null);
     setIsDialogOpen(true);
@@ -100,6 +107,23 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     setIsDialogOpen(false);
     setSelectedTask(null);
   };
+  
+  // Fetch project members for task detail view
+  const { data: members } = useQuery({
+    queryKey: ['/api/projects', projectId, 'members'],
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}/members`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch project members');
+      }
+      
+      return response.json();
+    },
+    enabled: isDetailOpen, // Only fetch when detail dialog is open
+  });
   
   if (isLoading) {
     return <div className="p-8 text-center">Loading tasks...</div>;
