@@ -136,6 +136,28 @@ export const notificationInsertSchema = createInsertSchema(notifications);
 export type NotificationInsert = z.infer<typeof notificationInsertSchema>;
 export type Notification = typeof notifications.$inferSelect;
 
+// Project Files
+export const projectFiles = pgTable("project_files", {
+  id: serial("id").primaryKey(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileType: text("file_type").notNull(),
+  filePath: text("file_path").notNull(),
+  projectId: integer("project_id").references(() => projects.id).notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectFileInsertSchema = createInsertSchema(projectFiles, {
+  fileName: (schema) => schema.min(1, "File name is required"),
+  description: (schema) => schema.optional(),
+});
+
+export type ProjectFileInsert = z.infer<typeof projectFileInsertSchema>;
+export type ProjectFile = typeof projectFiles.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   tasks: many(tasks, { relationName: "assignedTasks" }),
@@ -144,12 +166,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   messages: many(chatMessages),
   createdProjects: many(projects, { relationName: "createdProjects" }),
   notifications: many(notifications),
+  uploadedFiles: many(projectFiles, { relationName: "uploadedFiles" }),
 }));
 
 export const projectsRelations = relations(projects, ({ many, one }) => ({
   members: many(projectMembers),
   tasks: many(tasks),
   chatRooms: many(chatRooms),
+  files: many(projectFiles),
   creator: one(users, {
     fields: [projects.createdBy],
     references: [users.id],
@@ -212,5 +236,17 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
     references: [users.id],
+  }),
+}));
+
+export const projectFilesRelations = relations(projectFiles, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectFiles.projectId],
+    references: [projects.id],
+  }),
+  uploader: one(users, {
+    fields: [projectFiles.uploadedBy],
+    references: [users.id],
+    relationName: "uploadedFiles",
   }),
 }));
