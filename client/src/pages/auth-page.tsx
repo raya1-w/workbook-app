@@ -96,12 +96,12 @@ export default function AuthPage() {
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
               <BrainIcon className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-fantasy font-bold text-foreground">TaskMaster</h1>
+            <h1 className="text-2xl font-fantasy font-bold text-foreground">WorkBook</h1>
           </div>
           
           <div className="space-y-2">
             <h2 className="text-3xl font-fantasy font-bold tracking-tight">
-              Welcome to TaskMaster
+              Welcome to WorkBook
             </h2>
             <p className="text-muted-foreground">
               The comprehensive task monitoring and team collaboration platform
@@ -277,7 +277,7 @@ export default function AuthPage() {
                 Enhance Your Team's Productivity
               </h3>
               <p className="text-muted-foreground">
-                TaskMaster provides powerful tools to help your team collaborate effectively
+                WorkBook provides powerful tools to help your team collaborate effectively
               </p>
             </div>
             
@@ -368,7 +368,7 @@ export default function AuthPage() {
           <div className="mt-8 rounded-lg overflow-hidden bg-gradient-to-br from-primary-dark via-primary to-primary-light p-1 opacity-80">
             <div className="bg-card rounded-md p-6">
               <blockquote className="text-lg italic text-muted-foreground">
-                "TaskMaster has revolutionized how our team collaborates. The real-time updates and intuitive interface have significantly improved our productivity."
+                "WorkBook has revolutionized how our team collaborates. The real-time updates and intuitive interface have significantly improved our productivity."
               </blockquote>
               <div className="mt-4 flex items-center">
                 <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-xs text-accent-foreground font-semibold">
