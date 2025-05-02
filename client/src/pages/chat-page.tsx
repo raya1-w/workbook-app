@@ -29,12 +29,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { DialogDescription } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 
 export default function ChatPage() {
@@ -49,6 +52,10 @@ export default function ChatPage() {
   const [newDirectChatDialog, setNewDirectChatDialog] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("project");
+  const [searchUsername, setSearchUsername] = useState<string>("");
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [searchError, setSearchError] = useState<string>("");
+  const [searchingUser, setSearchingUser] = useState<boolean>(false);
   const { toast } = useToast();
   
   // Fetch user's projects
@@ -218,6 +225,35 @@ export default function ChatPage() {
     setSelectedDirectChat(roomId);
   };
   
+  // Handle user search by username
+  const handleSearchUser = async () => {
+    if (!searchUsername.trim()) return;
+    
+    setSearchingUser(true);
+    setSearchError("");
+    setSearchResult(null);
+    
+    try {
+      const response = await apiRequest("GET", `/api/users/search?username=${encodeURIComponent(searchUsername.trim())}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setSearchError("User not found");
+        } else {
+          throw new Error("Failed to search for user");
+        }
+        return;
+      }
+      
+      const userData = await response.json();
+      setSearchResult(userData);
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setSearchingUser(false);
+    }
+  };
+  
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
       {isMobile ? (
@@ -352,27 +388,79 @@ export default function ChatPage() {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Start a New Conversation</DialogTitle>
+                          <DialogDescription>
+                            Search and select a user to start a direct conversation
+                          </DialogDescription>
                         </DialogHeader>
                         <div className="py-4">
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Choose a team member to start a private conversation
-                          </p>
-                          <Select 
-                            value={selectedRecipient}
-                            onValueChange={setSelectedRecipient}
-                            disabled={loadingUsers || !availableUsers || availableUsers.length === 0}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a team member" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableUsers?.map((user: any) => (
-                                <SelectItem key={user.id} value={user.id.toString()}>
-                                  {user.fullName || user.username}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="mb-4">
+                            <Label className="mb-2 block">Find User by Username</Label>
+                            <div className="flex gap-2">
+                              <Input 
+                                placeholder="Enter username" 
+                                value={searchUsername}
+                                onChange={(e) => setSearchUsername(e.target.value)}
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="icon"
+                                onClick={handleSearchUser}
+                                disabled={!searchUsername || searchingUser}
+                              >
+                                {searchingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            {searchError && (
+                              <p className="text-sm text-destructive mt-1">{searchError}</p>
+                            )}
+                            {searchResult && (
+                              <div className="mt-2 p-2 border rounded-md flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback>
+                                      {searchResult.username.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium">{searchResult.fullName || searchResult.username}</p>
+                                    <p className="text-xs text-muted-foreground">@{searchResult.username}</p>
+                                  </div>
+                                </div>
+                                <Button 
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedRecipient(searchResult.id.toString());
+                                    setSearchResult(null);
+                                    setSearchUsername('');
+                                  }}
+                                >
+                                  Select
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <Separator className="my-4" />
+                          
+                          <div>
+                            <Label className="mb-2 block">Or select from existing contacts</Label>
+                            <Select 
+                              value={selectedRecipient}
+                              onValueChange={setSelectedRecipient}
+                              disabled={loadingUsers || !availableUsers || availableUsers.length === 0}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a team member" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableUsers?.map((user: any) => (
+                                  <SelectItem key={user.id} value={user.id.toString()}>
+                                    {user.fullName || user.username}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button 
