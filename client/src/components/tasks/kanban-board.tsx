@@ -159,6 +159,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
                 task={task} 
                 onDragStart={(e) => handleDragStart(e, task)}
                 onEdit={() => handleEditTask(task)}
+                onClick={() => handleViewTask(task)}
               />
             ))}
             {todoTasks.length === 0 && (
@@ -189,6 +190,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
                 task={task} 
                 onDragStart={(e) => handleDragStart(e, task)}
                 onEdit={() => handleEditTask(task)}
+                onClick={() => handleViewTask(task)}
               />
             ))}
             {inProgressTasks.length === 0 && (
@@ -219,6 +221,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
                 task={task} 
                 onDragStart={(e) => handleDragStart(e, task)}
                 onEdit={() => handleEditTask(task)}
+                onClick={() => handleViewTask(task)}
               />
             ))}
             {completedTasks.length === 0 && (
@@ -230,12 +233,26 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         </div>
       </div>
       
+      {/* Edit Task Dialog */}
       <TaskDialog 
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
         task={selectedTask}
         projectId={projectId}
         onClose={handleDialogClose}
+      />
+      
+      {/* Task Details View with Time Tracking */}
+      <TaskDetail
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        task={selectedTask}
+        projectId={projectId}
+        users={members?.map(member => member.user)}
+        onEditClick={() => {
+          setIsDetailOpen(false);
+          setIsDialogOpen(true);
+        }}
       />
     </div>
   );
