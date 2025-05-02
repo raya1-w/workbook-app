@@ -12,12 +12,14 @@ import ChatPage from "@/pages/chat-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import ProfilePage from "@/pages/profile-page";
 import ProjectsPage from "@/pages/projects-page";
+import PersonalTasksPage from "@/pages/personal-tasks-page";
 
 function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/tasks" component={TasksPage} />
+      <ProtectedRoute path="/personal-tasks" component={PersonalTasksPage} />
       <ProtectedRoute path="/projects" component={ProjectsPage} />
       <ProtectedRoute path="/chat" component={ChatPage} />
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />

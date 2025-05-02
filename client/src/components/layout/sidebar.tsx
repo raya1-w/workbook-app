@@ -9,7 +9,8 @@ import {
   BarChart2, 
   Settings, 
   LogOut, 
-  Brain
+  Brain,
+  ListTodo
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
@@ -30,7 +31,8 @@ export function Sidebar({ className }: SidebarProps) {
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: <Home className="w-6 h-6" /> },
-    { path: "/tasks", label: "Tasks", icon: <CheckSquare className="w-6 h-6" /> },
+    { path: "/tasks", label: "Project Tasks", icon: <CheckSquare className="w-6 h-6" /> },
+    { path: "/personal-tasks", label: "My Tasks", icon: <ListTodo className="w-6 h-6" /> },
     { path: "/projects", label: "Projects", icon: <FolderKanban className="w-6 h-6" /> },
     { path: "/chat", label: "Chat Rooms", icon: <MessageSquare className="w-6 h-6" /> },
     { path: "/analytics", label: "Analytics", icon: <BarChart2 className="w-6 h-6" /> },
