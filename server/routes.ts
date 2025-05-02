@@ -584,6 +584,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Add participant to chat room
+  app.post('/api/chat-rooms/:roomId/participants', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const userId = req.user!.id;
+    const roomId = parseInt(req.params.roomId);
+    const { participantId } = req.body;
+    
+    if (!participantId) {
+      return res.status(400).json({ message: 'Participant ID is required' });
+    }
+    
+    try {
+      // Get chat room details
+      const chatRoom = await storage.getChatRoom(roomId);
+      
+      if (!chatRoom) {
+        return res.status(404).json({ message: 'Chat room not found' });
+      }
+      
+      // Check authorization
+      if (chatRoom.isDirectMessage) {
+        // For direct messages, only participants can add others
+        const participants = await storage.getChatRoomParticipants(roomId);
+        const isParticipant = participants.some(p => p.user.id === userId);
+        
+        if (!isParticipant) {
+          return res.status(403).json({ message: 'Not authorized to add participants to this chat' });
+        }
+      } else if (chatRoom.projectId) {
+        // For project chat rooms, only project members can add participants
+        const isMember = await storage.isProjectMember(chatRoom.projectId, userId);
+        
+        if (!isMember) {
+          return res.status(403).json({ message: 'Not authorized to add participants to this chat room' });
+        }
+        
+        // Make sure the user being added is also a project member
+        const isParticipantProjectMember = await storage.isProjectMember(chatRoom.projectId, parseInt(participantId));
+        
+        if (!isParticipantProjectMember) {
+          return res.status(400).json({ message: 'Cannot add non-project member to project chat room' });
+        }
+      }
+      
+      // Add participant to chat room
+      const participant = await storage.addChatRoomParticipant({
+        roomId,
+        userId: parseInt(participantId)
+      });
+      
+      res.status(201).json(participant);
+    } catch (error) {
+      console.error('Error adding participant to chat room:', error);
+      res.status(500).json({ message: 'Failed to add participant to chat room' });
+    }
+  });
+  
   app.get('/api/direct-messages/:roomId/files', async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: 'Not authenticated' });
