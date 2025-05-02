@@ -29,6 +29,7 @@ const taskFormSchema = z.object({
   status: z.enum(["todo", "in_progress", "completed"]),
   priority: z.enum(["low", "medium", "high"]),
   dueDate: z.string().optional().nullable(),
+  recurringType: z.enum(["none", "daily", "weekly", "monthly"]).default("none"),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -66,6 +67,7 @@ export default function PersonalTasksPage() {
       status: "todo",
       priority: "medium",
       dueDate: null,
+      recurringType: "none",
     }
   });
 
@@ -167,6 +169,7 @@ export default function PersonalTasksPage() {
       status: task.status,
       priority: task.priority,
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
+      recurringType: task.recurringType || "none",
     });
     setTaskDialogOpen(true);
   };
@@ -179,6 +182,7 @@ export default function PersonalTasksPage() {
       status: "todo",
       priority: "medium",
       dueDate: null,
+      recurringType: "none",
     });
     setTaskDialogOpen(true);
   };
@@ -264,11 +268,19 @@ export default function PersonalTasksPage() {
                             </div>
                             {getPriorityBadge(task.priority)}
                           </div>
-                          {task.dueDate && (
-                            <CardDescription>
-                              Due: {new Date(task.dueDate).toLocaleDateString()}
-                            </CardDescription>
-                          )}
+                          <CardDescription className="flex flex-col gap-1">
+                            {task.dueDate && (
+                              <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                            )}
+                            {task.recurringType && task.recurringType !== "none" && (
+                              <span className="flex items-center text-xs">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Repeats: {task.recurringType.charAt(0).toUpperCase() + task.recurringType.slice(1)}
+                              </span>
+                            )}
+                          </CardDescription>
                         </CardHeader>
                         <CardContent className="pb-2">
                           {task.description && <p className="text-sm">{task.description}</p>}
@@ -403,23 +415,56 @@ export default function PersonalTasksPage() {
                 />
               </div>
               
-              <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Due Date (optional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        value={field.value || ""} 
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due Date (optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value || ""} 
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="recurringType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recurring</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select recurring type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No Repeat</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Set if this task should repeat automatically
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
               <DialogFooter className="pt-4">
                 <Button 
