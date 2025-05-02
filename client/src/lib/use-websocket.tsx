@@ -22,9 +22,24 @@ export function useWebSocket(): {
     if (!user) {
       return;
     }
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+// Use the configured API_URL from config.ts
+    import { API_URL } from "../config";
+    
+    let wsUrl: string;
+    
+    if (API_URL) {
+      // If API_URL is set, use it to build the WebSocket URL
+      const wsProtocol = API_URL.startsWith('https') ? 'wss' : 'ws';
+      const apiUrlWithoutProtocol = API_URL.replace(/^https?:\/\//, '');
+      wsUrl = `${wsProtocol}://${apiUrlWithoutProtocol}/ws`;
+    } else {
+      // Fallback to same origin if API_URL is not set
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      wsUrl = `${protocol}//${window.location.host}/ws`;
+    }
+    
+    console.log('Connecting to WebSocket at:', wsUrl);
+   
     
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
