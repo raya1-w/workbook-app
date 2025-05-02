@@ -78,6 +78,7 @@ export const tasks = pgTable("tasks", {
 
 export const taskInsertSchema = createInsertSchema(tasks, {
   title: (schema) => schema.min(3, "Task title must be at least 3 characters"),
+  dueDate: (schema) => schema.nullable(),
 });
 
 export type TaskInsert = z.infer<typeof taskInsertSchema>;
