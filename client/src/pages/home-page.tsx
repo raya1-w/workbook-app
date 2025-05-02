@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
-import { ChatInterface } from "@/components/chat/chat-interface";
+import { EnhancedChatInterface } from "@/components/chat/enhanced-chat-interface";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMobile } from "@/hooks/use-mobile";
@@ -146,7 +146,7 @@ export default function HomePage() {
               {loadingProjects || !firstProject || !chatRooms || chatRooms.length === 0 ? (
                 <Skeleton className="h-[510px] w-full" />
               ) : (
-                <ChatInterface roomId={chatRooms[0].id} projectId={firstProject.id} />
+                <EnhancedChatInterface roomId={chatRooms[0].id} projectId={firstProject.id} />
               )}
             </div>
           </div>
