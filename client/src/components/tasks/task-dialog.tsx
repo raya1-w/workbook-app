@@ -44,6 +44,7 @@ const taskFormSchema = z.object({
   priority: z.enum(["low", "medium", "high"]),
   assignedTo: z.number().optional().nullable(),
   dueDate: z.date().optional().nullable(),
+  recurringType: z.enum(["none", "daily", "weekly", "monthly"]).default("none"),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
@@ -88,6 +89,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId, onClose }: Tas
     priority: task?.priority || "medium",
     assignedTo: task?.assignedTo || null,
     dueDate: task?.dueDate ? new Date(task.dueDate) : null,
+    recurringType: task?.recurringType || "none",
   };
   
   const form = useForm<TaskFormValues>({
@@ -105,6 +107,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId, onClose }: Tas
         priority: task?.priority || "medium",
         assignedTo: task?.assignedTo || null,
         dueDate: task?.dueDate ? new Date(task.dueDate) : null,
+        recurringType: task?.recurringType || "none",
       });
       
       setDate(task?.dueDate ? new Date(task.dueDate) : undefined);
@@ -343,6 +346,34 @@ export function TaskDialog({ open, onOpenChange, task, projectId, onClose }: Tas
                 )}
               />
             </div>
+            
+            <FormField
+              control={form.control}
+              name="recurringType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recurring</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select recurring type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <DialogFooter>
               <Button 
