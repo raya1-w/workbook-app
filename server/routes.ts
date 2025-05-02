@@ -6,6 +6,7 @@ import { setupAuth } from "./auth";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import path from "path";
+import fs from "fs";
 import { projectUpload, chatUpload, getFileUrl } from "./file-uploads";
 
 interface WebSocketMessage {
@@ -715,6 +716,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting personal task:', error);
       res.status(500).json({ message: 'Error deleting personal task' });
+    }
+  });
+  
+  // File Uploads API
+  app.post('/api/projects/:projectId/files', projectUpload.single('file'), async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const projectId = parseInt(req.params.projectId);
+      
+      // Verify project exists and user is a member
+      const isMember = await storage.isProjectMember(projectId, req.user!.id);
+      if (!isMember) {
+        return res.status(403).json({ message: 'Not authorized to upload files to this project' });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+      
+      // Create file record in database
+      const projectFile = await storage.createProjectFile({
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        filePath: req.file.path,
+        projectId,
+        uploadedBy: req.user!.id,
+        description: req.body.description || null,
+      });
+      
+      // Generate URL for the file
+      const fileUrl = getFileUrl(req.file.path);
+      
+      // Create a notification for project members
+      const projectMembers = await storage.getProjectMembers(projectId);
+      const project = await storage.getProject(projectId);
+      
+      // Create notifications for all project members except the uploader
+      const notifications = projectMembers
+        .filter(member => member.userId !== req.user!.id)
+        .map(member => storage.createNotification({
+          userId: member.userId,
+          content: `New file "${req.file!.originalname}" uploaded to project "${project!.name}"`,
+          type: 'file_upload',
+          relatedId: projectFile.id,
+        }));
+      
+      await Promise.all(notifications);
+      
+      res.status(201).json({
+        ...projectFile,
+        url: fileUrl,
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      res.status(500).json({ message: 'Error uploading file' });
+    }
+  });
+  
+  app.get('/api/projects/:projectId/files', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const projectId = parseInt(req.params.projectId);
+      
+      // Verify project exists and user is a member
+      const isMember = await storage.isProjectMember(projectId, req.user!.id);
+      if (!isMember) {
+        return res.status(403).json({ message: 'Not authorized to view files for this project' });
+      }
+      
+      // Get files for this project
+      const files = await storage.getProjectFiles(projectId);
+      
+      // Add URL to each file
+      const filesWithUrls = files.map(file => ({
+        ...file,
+        url: getFileUrl(file.filePath),
+      }));
+      
+      res.json(filesWithUrls);
+    } catch (error) {
+      console.error('Error fetching project files:', error);
+      res.status(500).json({ message: 'Error fetching project files' });
+    }
+  });
+  
+  app.delete('/api/projects/:projectId/files/:fileId', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const fileId = parseInt(req.params.fileId);
+      
+      // Get the file record
+      const file = await storage.getProjectFile(fileId);
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      
+      // Verify the file belongs to the specified project
+      if (file.projectId !== projectId) {
+        return res.status(400).json({ message: 'File does not belong to this project' });
+      }
+      
+      // Verify user is a project member with admin role or the file uploader
+      const project = await storage.getProject(projectId);
+      const member = (await storage.getProjectMembers(projectId))
+        .find(m => m.userId === req.user!.id);
+        
+      if (!member) {
+        return res.status(403).json({ message: 'Not authorized to delete files from this project' });
+      }
+      
+      const isAdmin = member.role === 'admin';
+      const isUploader = file.uploadedBy === req.user!.id;
+      const isCreator = project!.createdBy === req.user!.id;
+      
+      if (!isAdmin && !isUploader && !isCreator) {
+        return res.status(403).json({ message: 'Not authorized to delete this file' });
+      }
+      
+      // Delete the file from storage
+      if (file.filePath) {
+        try {
+          fs.unlinkSync(file.filePath);
+        } catch (err) {
+          console.error('Error deleting file from disk:', err);
+          // Continue even if physical file deletion fails
+        }
+      }
+      
+      // Delete the file record from database
+      await storage.deleteProjectFile(fileId);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      res.status(500).json({ message: 'Error deleting file' });
     }
   });
   
