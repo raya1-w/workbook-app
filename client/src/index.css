@@ -198,7 +198,7 @@
 }
 
 .priority-medium {
-  @apply bg-muted text-muted-foreground;
+  @apply bg-primary-light text-primary-dark;
 }
 
 .priority-low {
