@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
-import { ChatInterface } from "@/components/chat/chat-interface";
+import { EnhancedChatInterface } from "@/components/chat/enhanced-chat-interface";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, MessageSquare, MessagesSquare, Users, Search } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -220,7 +223,7 @@ export default function ChatPage() {
             {loadingProjects || loadingRooms || !selectedProject || !selectedRoom ? (
               <Skeleton className="h-full w-full" />
             ) : (
-              <ChatInterface roomId={selectedRoom} projectId={selectedProject} />
+              <EnhancedChatInterface roomId={selectedRoom} projectId={selectedProject} />
             )}
           </div>
         </main>
