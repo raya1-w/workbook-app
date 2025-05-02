@@ -276,8 +276,18 @@ export default function DirectChatInterface({ roomId }: DirectChatInterfaceProps
           // Create audio file from chunks
           if (audioChunks.length > 0) {
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
-            setSelectedFile(audioFile);
+            try {
+              const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
+              setSelectedFile(audioFile);
+            } catch (err) {
+              // Fallback for browsers that don't support File constructor
+              // @ts-ignore - this is a workaround
+              audioBlob.name = 'voice-message.webm';
+              // @ts-ignore - this is a workaround
+              audioBlob.lastModified = new Date();
+              // @ts-ignore - this is a workaround
+              setSelectedFile(audioBlob as File);
+            }
             
             // Reset audio chunks
             setAudioChunks([]);
@@ -353,7 +363,7 @@ export default function DirectChatInterface({ roomId }: DirectChatInterfaceProps
                 <SheetTitle>Participants</SheetTitle>
               </SheetHeader>
               <div className="mt-4">
-                {participants?.map((participant) => (
+                {participants?.map((participant: { userId: number, user: { id: number, avatarUrl?: string, username?: string, fullName?: string } }) => (
                   <div key={participant.userId} className="flex items-center gap-3 py-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={participant.user.avatarUrl || ''} />
@@ -400,7 +410,7 @@ export default function DirectChatInterface({ roomId }: DirectChatInterfaceProps
               <p className="text-muted-foreground text-center">No messages yet. Start the conversation!</p>
             </div>
           ) : (
-            messages?.map((message) => (
+            messages?.map((message: { id: number, user: { id: number, fullName?: string, username?: string }, content: string, createdAt: string }) => (
               <div
                 key={message.id}
                 className={cn(

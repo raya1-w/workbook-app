@@ -8,7 +8,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { 
   Plus, MessageSquare, MessagesSquare, Users, Search, X, 
-  User, UserPlus 
+  User, UserPlus, Loader2
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
