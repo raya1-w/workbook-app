@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { API_URL } from "../config";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -6,13 +7,26 @@ async function throwIfResNotOk(res: Response) {
     throw new Error(`${res.status}: ${text}`);
   }
 }
-
+// Helper to prepend API_URL for relative endpoints
+function getFullUrl(url: string): string {
+  // If URL is already absolute, return it as is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // If no API_URL is defined or empty, use relative URLs (same domain)
+  if (!API_URL) {
+    return url;
+  }
+  // Otherwise prepend API_URL
+  return `${API_URL}${url}`;
+}
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const fullUrl = getFullUrl(url);
+  const res = await fetch(fullUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -29,7 +43,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+     const fullUrl = getFullUrl(queryKey[0] as string);
+    const res = await fetch(fullUrl, {
+   
       credentials: "include",
     });
 
