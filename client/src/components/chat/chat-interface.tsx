@@ -6,13 +6,24 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChatMessage } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PaperclipIcon, ImageIcon, SendIcon, PlusIcon } from "lucide-react";
+import { PaperclipIcon, ImageIcon, SendIcon, PlusIcon, UserPlusIcon, UsersIcon } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +35,9 @@ interface ChatInterfaceProps {
 export function ChatInterface({ roomId, projectId }: ChatInterfaceProps) {
   const { user } = useAuth();
   const [message, setMessage] = useState("");
+  const [newUsername, setNewUsername] = useState("");
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
+  const [isProject, setIsProject] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { sendMessage, lastMessage } = useWebSocket();
   const queryClient = useQueryClient();
@@ -62,6 +76,47 @@ export function ChatInterface({ roomId, projectId }: ChatInterfaceProps) {
     },
     enabled: !!roomId,
   });
+  
+  // Fetch project details
+  const { data: project, isLoading: loadingProject } = useQuery({
+    queryKey: ['/api/projects', projectId],
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch project');
+      }
+      
+      return response.json();
+    },
+    enabled: !!projectId,
+  });
+  
+  // Fetch project members
+  const { data: members, isLoading: loadingMembers } = useQuery({
+    queryKey: ['/api/projects', projectId, 'members'],
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}/members`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch project members');
+      }
+      
+      return response.json();
+    },
+    enabled: !!projectId,
+  });
+  
+  // Check if current user is project creator
+  useEffect(() => {
+    if (project && user) {
+      setIsProject(project.createdBy === user.id ? project : null);
+    }
+  }, [project, user]);
   
   // Listen for new messages via WebSocket
   useEffect(() => {
@@ -205,6 +260,49 @@ export function ChatInterface({ roomId, projectId }: ChatInterfaceProps) {
     }
   };
   
+  // Add member mutation
+  const addMemberMutation = useMutation({
+    mutationFn: async (username: string) => {
+      const response = await apiRequest(
+        "POST", 
+        `/api/projects/${projectId}/members`, 
+        { username, role: 'member' }
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/projects', projectId, 'members'],
+      });
+      
+      toast({
+        title: "Member added",
+        description: `User ${newUsername} has been added to the project.`,
+      });
+      
+      // Send a notification in the chat
+      sendMessage('chat_message', {
+        roomId,
+        content: `I've added ${newUsername} to the project.`,
+      });
+      
+      setNewUsername("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to add member",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleAddMember = () => {
+    if (!newUsername.trim()) return;
+    
+    addMemberMutation.mutate(newUsername.trim());
+  };
+  
   if (loadingRoom || loadingMessages) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -225,7 +323,16 @@ export function ChatInterface({ roomId, projectId }: ChatInterfaceProps) {
             <div className="text-xs opacity-80">Project Chat</div>
           </div>
         </div>
-        <div>
+        <div className="flex">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-primary-foreground hover:text-primary-foreground/80 mr-1"
+            onClick={() => setMembersDialogOpen(true)}
+          >
+            <UsersIcon className="h-5 w-5 mr-1" />
+            <span className="text-xs">Members</span>
+          </Button>
           <Button variant="ghost" size="sm" className="text-primary-foreground hover:text-primary-foreground/80">
             <InfoIcon className="h-5 w-5" />
           </Button>
