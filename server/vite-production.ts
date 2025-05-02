@@ -23,40 +23,21 @@ export async function setupVite(_app: Express, _server: Server) {
 export function serveStatic(app: Express) {
   const distPath = path.resolve(process.cwd(), "dist", "public");
   
-  // Check if directory exists, if not create it
   if (!fs.existsSync(distPath)) {
-    console.log(`Creating dist/public directory: ${distPath}`);
-    fs.mkdirSync(distPath, { recursive: true });
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+    );
   }
 
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
-  app.get("*", (_req, res) => {
-    // Create a simple HTML file if it doesn't exist
-    const indexPath = path.resolve(distPath, "index.html");
-    if (!fs.existsSync(indexPath)) {
-      console.log(`Creating basic index.html in ${indexPath}`);
-      const html = `<!DOCTYPE html>
-<html>
-<head>
-  <title>WorkBook App - API Server</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-    h1 { color: #333; }
-    .container { max-width: 800px; margin: 0 auto; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>WorkBook API Server</h1>
-    <p>This is the API server for the WorkBook application.</p>
-    <p>The frontend client is not available in this production build.</p>
-  </div>
-</body>
-</html>`;
-      fs.writeFileSync(indexPath, html);
+  app.get("*", (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return next();
     }
-    res.sendFile(indexPath);
+    
+    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
