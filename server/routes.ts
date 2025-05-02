@@ -1,10 +1,12 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import path from "path";
+import { projectUpload, chatUpload, getFileUrl } from "./file-uploads";
 
 interface WebSocketMessage {
   type: string;
