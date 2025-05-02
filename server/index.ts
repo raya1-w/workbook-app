@@ -8,7 +8,12 @@ const app = express();
 
 // Configure CORS
 app.use(cors({
-  origin: true,
+  origin: [
+    'https://capable-kataifi-8fae06.netlify.app',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174'
+  ],
   credentials: true
 }));
 
