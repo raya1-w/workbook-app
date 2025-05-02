@@ -351,16 +351,19 @@ export default function ChatPage() {
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>New Direct Message</DialogTitle>
+                          <DialogTitle>Start a New Conversation</DialogTitle>
                         </DialogHeader>
                         <div className="py-4">
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Choose a team member to start a private conversation
+                          </p>
                           <Select 
                             value={selectedRecipient}
                             onValueChange={setSelectedRecipient}
                             disabled={loadingUsers || !availableUsers || availableUsers.length === 0}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select contact" />
+                              <SelectValue placeholder="Select a team member" />
                             </SelectTrigger>
                             <SelectContent>
                               {availableUsers?.map((user: any) => (
@@ -385,7 +388,7 @@ export default function ChatPage() {
                             {createDirectChatMutation.isPending ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : null}
-                            Start Chat
+                            Start Conversation
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -442,13 +445,13 @@ export default function ChatPage() {
                       </div>
                     ) : (
                       <div className="p-4 text-center">
-                        <p className="text-muted-foreground text-sm">No direct messages yet</p>
+                        <p className="text-muted-foreground text-sm">No conversations yet</p>
                         <Button
                           variant="link"
                           onClick={() => setNewDirectChatDialog(true)}
                           className="mt-2"
                         >
-                          Start a new conversation
+                          Start a conversation
                         </Button>
                       </div>
                     )}
@@ -469,7 +472,7 @@ export default function ChatPage() {
                         className="mt-4"
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
-                        Start New Conversation
+                        Start a Conversation
                       </Button>
                     </div>
                   ) : (
