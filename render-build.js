@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-console.log('Starting custom build script for Render deployment...');
+console.log('Starting server build script for Render deployment...');
 
 // Make sure the dist directory exists
 if (!fs.existsSync('dist')) {
@@ -10,13 +10,17 @@ if (!fs.existsSync('dist')) {
   console.log('Created dist directory');
 }
 
-// Ensure dist/public directory exists
-if (!fs.existsSync('dist/public')) {
-  fs.mkdirSync('dist/public', { recursive: true });
-  console.log('Created dist/public directory');
+// Build the frontend first
+try {
+  console.log('Building frontend...');
+  execSync('node render-frontend-build.js', { stdio: 'inherit' });
+  console.log('Frontend build completed');
+} catch (error) {
+  console.error('Error building frontend:', error);
+  process.exit(1);
 }
 
-// Skip Vite build for now and just build the server
+// Build the server
 try {
   console.log('Building server with esbuild...');
   
@@ -56,4 +60,4 @@ try {
   console.log('Error creating uploads directory:', error);
 }
 
-console.log('Custom build completed successfully!');
+console.log('Build completed successfully!');
