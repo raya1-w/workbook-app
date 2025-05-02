@@ -158,6 +158,23 @@ export function EnhancedChatInterface({ roomId, projectId }: EnhancedChatInterfa
     },
     enabled: !!projectId,
   });
+  
+  // Fetch chat room participants
+  const { data: participants, isLoading: loadingParticipants } = useQuery({
+    queryKey: ['/api/chat-rooms', roomId, 'participants'],
+    queryFn: async () => {
+      const response = await fetch(`/api/chat-rooms/${roomId}/participants`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch chat room participants');
+      }
+      
+      return response.json();
+    },
+    enabled: !!roomId && !room?.projectId,
+  });
 
   // Fetch project tasks
   const { data: tasks, isLoading: loadingTasks } = useQuery({
@@ -885,7 +902,8 @@ export function EnhancedChatInterface({ roomId, projectId }: EnhancedChatInterfa
             </TabsList>
             
             <TabsContent value="members" className="mt-4">
-              {loadingMembers ? (
+              {/* For project chat rooms */}
+              {room?.projectId && (loadingMembers ? (
                 <div className="flex items-center justify-center p-8">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
@@ -932,7 +950,48 @@ export function EnhancedChatInterface({ roomId, projectId }: EnhancedChatInterfa
                 <div className="text-center text-muted-foreground p-8">
                   No members found in this project.
                 </div>
-              )}
+              ))}
+              
+              {/* For direct message chat rooms */}
+              {!room?.projectId && (loadingParticipants ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : participants && participants.length > 0 ? (
+                <div className="space-y-4">
+                  {participants.map((participant: any) => (
+                    <div 
+                      key={participant.user.id} 
+                      className="flex items-center justify-between p-3 bg-muted/40 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-primary/20 text-primary">
+                            {participant.user.username.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">
+                            {participant.user.fullName || participant.user.username}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {participant.user.email || `@${participant.user.username}`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-primary/20 text-primary rounded-full px-2 py-1">
+                          Participant
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  No participants found in this chat.
+                </div>
+              ))}
             </TabsContent>
             
             <TabsContent value="invite" className="mt-4">
