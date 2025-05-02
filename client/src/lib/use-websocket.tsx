@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { API_URL } from "../config.ts";
 
 interface WebSocketMessage {
   type: string;
@@ -22,9 +23,8 @@ export function useWebSocket(): {
     if (!user) {
       return;
     }
-// Use the configured API_URL from config.ts
-    import { API_URL } from "../config";
-    
+
+    // Build WebSocket URL based on API_URL configuration
     let wsUrl: string;
     
     if (API_URL) {
@@ -39,8 +39,6 @@ export function useWebSocket(): {
     }
     
     console.log('Connecting to WebSocket at:', wsUrl);
-   
-    
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
