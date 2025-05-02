@@ -41,6 +41,7 @@ export interface IStorage {
   getTask(id: number): Promise<Task | undefined>;
   getProjectTasks(projectId: number): Promise<(Task & { assignee?: User })[]>;
   getUserTasks(userId: number): Promise<(Task & { project: Project })[]>;
+  getPersonalTasks(userId: number): Promise<Task[]>;
   createTask(task: TaskInsert): Promise<Task>;
   updateTask(id: number, task: Partial<Task>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<void>;
@@ -256,6 +257,21 @@ class DatabaseStorage implements IStorage {
       ...task,
       project,
     }));
+  }
+  
+  async getPersonalTasks(userId: number): Promise<Task[]> {
+    // Get tasks where projectId is null and created by the user
+    // These are personal tasks not associated with any project
+    return db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.createdBy, userId),
+          sql`${tasks.projectId} IS NULL`
+        )
+      )
+      .orderBy(desc(tasks.updatedAt));
   }
 
   async createTask(task: TaskInsert): Promise<Task> {

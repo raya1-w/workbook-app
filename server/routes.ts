@@ -590,5 +590,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Personal Tasks API (not associated with projects)
+  app.get('/api/personal-tasks', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const tasks = await storage.getPersonalTasks(req.user!.id);
+      res.json(tasks);
+    } catch (error) {
+      console.error('Error fetching personal tasks:', error);
+      res.status(500).json({ message: 'Error fetching personal tasks' });
+    }
+  });
+  
+  app.post('/api/personal-tasks', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const task = await storage.createTask({
+        ...req.body,
+        projectId: null, // Personal tasks have no project
+        createdBy: req.user!.id,
+        assignedTo: req.user!.id // Personal tasks are assigned to the creator
+      });
+      
+      res.status(201).json(task);
+    } catch (error) {
+      console.error('Error creating personal task:', error);
+      res.status(500).json({ message: 'Error creating personal task' });
+    }
+  });
+  
+  // Update a personal task
+  app.put('/api/personal-tasks/:id', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const taskId = parseInt(req.params.id);
+      const task = await storage.getTask(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Verify this is a personal task and belongs to the user
+      if (task.projectId !== null || task.createdBy !== req.user!.id) {
+        return res.status(403).json({ message: 'Not authorized to update this task' });
+      }
+      
+      const updatedTask = await storage.updateTask(taskId, req.body);
+      res.json(updatedTask);
+    } catch (error) {
+      console.error('Error updating personal task:', error);
+      res.status(500).json({ message: 'Error updating personal task' });
+    }
+  });
+  
+  // Delete a personal task
+  app.delete('/api/personal-tasks/:id', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const taskId = parseInt(req.params.id);
+      const task = await storage.getTask(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Verify this is a personal task and belongs to the user
+      if (task.projectId !== null || task.createdBy !== req.user!.id) {
+        return res.status(403).json({ message: 'Not authorized to delete this task' });
+      }
+      
+      await storage.deleteTask(taskId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting personal task:', error);
+      res.status(500).json({ message: 'Error deleting personal task' });
+    }
+  });
+  
   return httpServer;
 }
