@@ -9,6 +9,7 @@ const app = express();
 // Configure CORS
 app.use(cors({
   origin: [
+     'https://workbook-app-1.onrender.com',
     'https://capable-kataifi-8fae06.netlify.app',
     'http://localhost:3000',
     'http://localhost:5173',
