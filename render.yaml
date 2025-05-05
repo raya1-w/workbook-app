@@ -1,0 +1,10 @@
+services:
+  - type: static
+    name: workbook-frontend
+    env: node
+    buildCommand: |
+      npm install
+      npm run build
+      node render-frontend-build.js
+    staticPublishPath: dist/public
+    plan: free
